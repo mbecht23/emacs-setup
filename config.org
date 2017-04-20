@@ -1,0 +1,294 @@
+#+TITLE: Emacs Configuration File
+#+AUTHOR: Mike Becht
+#+STARTUP: overview
+#+STARTUP: hidestars
+
+* Initial window size and position
+#+BEGIN_SRC emacs-lisp
+(defun set-frame-size-according-to-resolution ()
+  (interactive)
+  (if window-system
+  (progn
+    ;; use 120 char wide window for largeish displays
+    ;; and smaller 80 column windows for smaller displays
+    ;; pick whatever numbers make sense for you
+    (if (> (x-display-pixel-width) 1280)
+           (add-to-list 'default-frame-alist (cons 'width 120))
+           (add-to-list 'default-frame-alist (cons 'width 80)))
+    ;; for the height, subtract a couple hundred pixels
+    ;; from the screen height (for panels, menubars and
+    ;; whatnot), then divide by the height of a char to
+    ;; get the height we want
+    (add-to-list 'default-frame-alist 
+         (cons 'height (/ (- (x-display-pixel-height) 200)
+                             (frame-char-height)))))))
+
+(set-frame-size-according-to-resolution)
+(setq initial-frame-alist '((left . 400) (top . 50)))
+#+END_SRC
+* Basic Emacs Display Custimazations
+#+BEGIN_SRC emacs-lisp
+(column-number-mode t)
+;;(display-time nil)
+(display-time-mode t)
+(line-number-mode t)
+(show-paren-mode t)
+(scroll-bar-mode -1)
+(setq truncate-lines t)
+;; Answering just 'y' or 'n' will do
+(defalias 'yes-or-no-p 'y-or-n-p)
+#+END_SRC
+** Nyan-mode
+Nyan Mode is an analog indicator of your position in the buffer. The
+Cat should go from left to right in your mode-line, as you move your
+point from 0% to 100%
+#+BEGIN_SRC emacs-lisp
+(use-package nyan-mode
+  :if window-system
+  :ensure t
+  :config
+  (nyan-mode)
+  ;;(nyan-start-animation)
+)
+#+END_SRC
+** Color Theme
+#+BEGIN_SRC emacs-lisp 
+  (use-package color-theme-sanityinc-tomorrow
+  :ensure t
+  :init
+  (progn
+    (load-theme 'sanityinc-tomorrow-night t)
+  ))
+#+END_SRC
+
+* Editing
+** Globals
+#+BEGIN_SRC emacs-lisp
+  ;; default to 4 visible spaces to display a tab
+  (setq tab-width 4)
+  (setq indent-tabs-mode nil)
+#+END_SRC
+** Scale-fonts
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-+") 'text-scale-increase)
+(global-set-key (kbd "C--") 'text-scale-decrease)
+#+END_SRC
+** Volatile-Highlights
+VolatileHighlights highlights changes to the buffer caused by commands
+such as undo, yank/yank-pop, etc. The highlight disappears at
+the next command. The highlighting gives useful visual feedback for
+what your operation actually changed in the buffer.
+#+BEGIN_SRC emacs-lisp
+  (use-package volatile-highlights
+    :config
+    (volatile-highlights-mode t))
+#+END_SRC
+
+* Programming
+** Global
+*** Yasnippet
+YASnippet is a template system for Emacs. It allows you to type an
+abbreviation and automatically expand it into function
+templates. Bundled language templates include: C, C++, C#, Perl,
+Python, Ruby, SQL, LaTeX, HTML, CSS and more. The snippet syntax is
+inspired from TextMate's syntax, you can even import most TextMate
+templates to YASnippet.
+#+BEGIN_SRC emacs-lisp
+  (use-package yasnippet
+    :config
+    (progn 
+      (yas-reload-all)
+      (yas-global-mode 1))
+    )
+#+END_SRC
+*** Company
+Company is a text completion framework for Emacs. The name stands for
+"complete anything". It uses pluggable back-ends and front-ends to
+retrieve and display completion candidates.
+#+BEGIN_SRC emacs-lisp
+(use-package company               
+  :ensure t
+  :defer t
+  :init (global-company-mode)
+  :config
+  (progn
+    ;; Use Company for completion
+    (bind-key [remap completion-at-point] 'company-complete company-mode-map)
+
+    (setq company-tooltip-align-annotations t
+          ;; Easy navigation to candidates with M-<n>
+          company-show-numbers t)
+    (setq company-dabbrev-downcase nil))
+  :diminish company-mode)
+#+END_SRC
+*** Flycheck
+#+BEGIN_SRC emacs-lisp
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode))
+#+END_SRC
+** C/C++
+*** Toggle between header and source file
+#+BEGIN_SRC emacs-lisp
+    (defun my/find-corresponding-file ()
+        "Find the file that corresponds to this one."
+        (interactive)
+        (setq CorrespondingFileName nil)
+        (setq BaseFileName (file-name-sans-extension buffer-file-name))
+        (if (string-match "\\.c" buffer-file-name)
+           (setq CorrespondingFileName (concat BaseFileName ".h")))
+        (if (string-match "\\.h" buffer-file-name)
+            (if (file-exists-p (concat BaseFileName ".c")) (setq CorrespondingFileName (concat BaseFileName ".c"))
+            (setq CorrespondingFileName (concat BaseFileName ".cpp"))))
+        (if (string-match "\\.hpp" buffer-file-name)
+           (setq CorrespondingFileName (concat BaseFileName ".cpp")))
+        (if (string-match "\\.cpp" buffer-file-name)
+            (if (file-exists-p (concat BaseFileName ".h")) (setq CorrespondingFileName (concat BaseFileName ".h"))
+              (setq CorrespondingFileName (concat BaseFileName ".hpp"))))
+        (if CorrespondingFileName (find-file CorrespondingFileName)
+           (error "Unable to find a corresponding file")))
+    (add-hook 'c++-mode-hook
+      (lambda () (define-key c++-mode-map (kbd "M-c") 'my/find-corresponding-file)))
+    (add-hook 'c-mode-hook
+      (lambda () (define-key c-mode-map (kbd "M-c") 'my/find-corresponding-file)))
+#+END_SRC
+** TCL
+#+BEGIN_SRC emacs-lisp
+  (setq tcl-continued-indent-level 4)
+  (setq tcl-indent-level 4)
+
+  ;; TCL-mode defines the delete key as backspace lets fix that
+  (add-hook 'tcl-mode-hook '(lambda () (define-key tcl-mode-map [delete] 'delete-char)))
+#+END_SRC
+** VHDL
+#+BEGIN_SRC emacs-lisp
+(use-package vhdl-mode
+:ensure t
+:init 
+(progn
+  (setq auto-mode-alist
+        (append '(("\\.vhdl$"  . vhdl-mode)
+                  ("\\.vhd$"  . vhdl-mode)
+                  ("\\.VHDL$"  . vhdl-mode)
+                  ) auto-mode-alist)))
+)
+#+END_SRC
+* Graphviz/Dot
+The Graphviz layout programs take simple text graph descriptions and
+make useful diagrams in a variety of formats. The Dot source code 
+produces the graphic files
+#+BEGIN_SRC emacs-lisp
+(load-file (expand-file-name "graphviz-dot-mode.el" my/emacs-directory))
+#+END_SRC
+* Helm
+Helm is an incremental completion and selection narrowing framework for
+Emacs. It will help steer you in the right direction when you're
+looking for stuff in Emacs (like buffers, files, etc).
+A little crazy to setup so I borrowed the sample from
+http://tuhdo.github.io/helm-intro.html
+#+BEGIN_SRC emacs-lisp
+(load-file (expand-file-name "setup-helm.el" my/emacs-directory))
+(require 'setup-helm)
+#+END_SRC
+* Org Mode
+Org mode is for keeping notes, maintaining TODO lists, planning
+projects, and authoring documents with a fast and effective plain-text
+system. Its pretty darn awesome ! 
+#+BEGIN_SRC emacs-lisp
+  (use-package org
+    :ensure t
+    :mode ("\\.org\\'" . org-mode)
+    :bind (("C-c l" . org-store-link)
+           ("C-c c" . org-capture)
+           ("C-c a" . org-agenda)
+           ("C-c b" . org-iswitchb)
+           ("C-c C-w" . org-refile)
+           ("C-c j" . org-clock-goto)
+           ("C-c C-x C-o" . org-clock-out))
+    :config
+    (progn
+      ;;(setq org-default-notes-file (concat org-directory "/notes.org"))
+      ;;(setq org-latex-listings t)
+      (setq org-startup-indented t)
+      (setq org-agenda-files (list my/gtdfile))
+      (setq org-agenda-ndays 1)
+      (setq org-deadline-warning-days 14)
+      (setq org-agenda-show-all-dates t)
+      (setq org-agenda-skip-deadline-if-done t)
+      (setq org-agenda-skip-scheduled-if-done t)
+      (setq org-agenda-start-on-weekday nil)
+      (setq org-tags-column -80)
+      (setq org-agenda-tags-column -96)
+      (setq org-fast-tag-selection-single-key (quote expert))
+      (setq org-agenda-sorting-strategy
+            '((agenda habit-down time-up priority-down category-keep)
+              (todo category-up priority-down)
+              (tags priority-down category-keep)
+              (search category-keep)))
+      (setq org-confirm-babel-evaluate nil)
+      (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
+      (add-to-list 'org-src-lang-modes '("dot" . graphviz-dot))
+      (setq org-babel-do-load-languages 'org-babel-load-languages)
+      (setq org-babel-load-languages (quote ((emacs-lisp . t) (dot . t))))
+      ;; display images
+      (setq org-startup-with-inline-images t)
+      ;; remove clocked tasks with 0:00 duration
+      (setq org-clock-out-remove-zero-time-clocks t)
+      ;; Logging stuff
+      (setq org-reverse-note-order nil)
+      (setq org-log-done (quote time))
+      (setq org-log-into-drawer t)
+      (setq org-log-state-notes-insert-after-drawers nil)
+      (setq org-clock-persist t)
+      (setq org-agenda-span 'month)
+      (setq org-agenda-custom-commands
+            '(("h" agenda "120 days"
+               ((org-agenda-show-all-dates nil)
+                (org-agenda-span 120))
+               )))
+      (setq org-capture-templates
+            '(("t" "Task" entry
+               (file+headline my/gtdfile "Collection")
+               "* TODO %?\nAdded On: %U\n")
+              ("n" "Note" entry
+               (file+headline my/gtdfile "Collection")
+               "* %? :note:\nAdded On: %U\n")
+              ("m" "Meeting" entry
+               (file+headline my/gtdfile "Collection")
+               "* MEETING %? :meeting:\nAdded On: %U\n")
+              ))
+      (setq org-todo-keyword-faces
+            '(
+              ("TODO" . (:foreground "#ff79c6" :box (:line-width 1 :style none)))
+              ("BEGUN" . (:foreground "#00bfff" :box (:line-width 1 :style none)))
+              ("REPLY" . (:foreground "#ff79c6" :box (:line-width 1 :style none)))
+              ("WAIT" . (:foreground "#f1fa8c" :box (:line-width 1 :style none)))
+              ("DONE" . (:foreground "#50fa7b" :box (:line-width 1 :style none)))
+              ))
+      ;; don't use _ as subscripts
+      (setq org-export-with-sub-superscripts nil)
+      (setq org-src-fontify-natively t)
+      (setq org-src-tab-acts-natively t)
+      (setq org-confirm-babel-evaluate nil)
+      (setq org-use-speed-commands t)
+      (setq org-clock-mode-line-total 'current)
+      (org-clock-persistence-insinuate)
+      (setq org-use-speed-commands t)
+      ))
+    ;;(use-package org-bullets
+    ;;  :ensure t
+    ;;  :commands (org-bullets-mode)
+    ;;  :init (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+#+END_SRC
+* Emacs Commands Hints
+| Key Binding     | Description                                 |
+|-----------------+---------------------------------------------|
+| C-Space         | set a mark                                  |
+| C-Space C-Space | unset mark                                  |
+| C-u C-Space     | jump to mark                                |
+| C-c C-i         | (helm) insert marked candidates into buffer |
+| M-y             | show kill ring                              |
+| helm-occur      | list of matches in current buffer           |
+
+To print a variable's value goto the *scratch* buffer
+(print default-directory) ctrl-j
