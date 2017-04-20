@@ -220,16 +220,6 @@ system. Its pretty darn awesome !
       (setq org-tags-column -80)
       (setq org-agenda-tags-column -96)
       (setq org-fast-tag-selection-single-key (quote expert))
-      (setq org-agenda-sorting-strategy
-            '((agenda habit-down time-up priority-down category-keep)
-              (todo category-up priority-down)
-              (tags priority-down category-keep)
-              (search category-keep)))
-      (setq org-confirm-babel-evaluate nil)
-      (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
-      (add-to-list 'org-src-lang-modes '("dot" . graphviz-dot))
-      (setq org-babel-do-load-languages 'org-babel-load-languages)
-      (setq org-babel-load-languages (quote ((emacs-lisp . t) (dot . t))))
       ;; display images
       (setq org-startup-with-inline-images t)
       ;; remove clocked tasks with 0:00 duration
@@ -241,11 +231,6 @@ system. Its pretty darn awesome !
       (setq org-log-state-notes-insert-after-drawers nil)
       (setq org-clock-persist t)
       (setq org-agenda-span 'month)
-      (setq org-agenda-custom-commands
-            '(("h" agenda "120 days"
-               ((org-agenda-show-all-dates nil)
-                (org-agenda-span 120))
-               )))
       (setq org-capture-templates
             '(("t" "Task" entry
                (file+headline my/gtdfile "Collection")
@@ -270,16 +255,18 @@ system. Its pretty darn awesome !
       (setq org-src-fontify-natively t)
       (setq org-src-tab-acts-natively t)
       (setq org-confirm-babel-evaluate nil)
-      (setq org-use-speed-commands t)
-      (setq org-clock-mode-line-total 'current)
-      (org-clock-persistence-insinuate)
-      (setq org-use-speed-commands t)
+      (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
+      (add-to-list 'org-src-lang-modes '("dot" . graphviz-dot))
+      (org-babel-do-load-languages
+       'org-babel-load-languages
+       '((emacs-lisp . t) (dot . t)))
       ))
-    ;;(use-package org-bullets
-    ;;  :ensure t
-    ;;  :commands (org-bullets-mode)
-    ;;  :init (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+  ;;(use-package org-bullets
+  ;;  :ensure t
+  ;;  :commands (org-bullets-mode)
+  ;;  :init (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 #+END_SRC
+
 * Emacs Commands Hints
 | Key Binding     | Description                                 |
 |-----------------+---------------------------------------------|
@@ -289,6 +276,7 @@ system. Its pretty darn awesome !
 | C-c C-i         | (helm) insert marked candidates into buffer |
 | M-y             | show kill ring                              |
 | helm-occur      | list of matches in current buffer           |
+| C-c C-c         | compile a code block in org-mode            |
 
 To print a variable's value goto the *scratch* buffer
 (print default-directory) ctrl-j
